@@ -7,6 +7,7 @@ public class TurnManager : MonoBehaviour
     [SerializeField] private List<Character> playerTeam = new List<Character>();
     [SerializeField] private List<Character> enemyTeam = new List<Character>();
     [SerializeField] private GridManager gridManager;
+    [SerializeField] private CardHandManager cardHandManager;
 
     private bool isPlayerTurn = true;
     private bool isExecutingTurn = false;
@@ -87,6 +88,7 @@ public class TurnManager : MonoBehaviour
 
         // Notify UI
         OnTurnChanged?.Invoke(isPlayerTurn);
+        cardHandManager.ClearAllCards();
         Debug.Log($"Turn ended. Now it's {(isPlayerTurn ? "Player" : "Enemy")} turn");
 
         // *** If it's enemy's turn next, auto-execute immediately ***
@@ -97,9 +99,6 @@ public class TurnManager : MonoBehaviour
             StartCoroutine(ExecuteTurn());
         }
     }
-
-
-
 
     public bool IsPlayerTurn()
     {

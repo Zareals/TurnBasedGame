@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private UnityEngine.UI.Button attackButton;
     [SerializeField] private UnityEngine.UI.Button endTurnButton;
     [SerializeField] private Transform commandQueueParent;
+    [SerializeField] private CardHandManager cardHandManager;
     
     [Header("Command Prefabs")]
     [SerializeField] private GameObject moveCommandPrefab;
@@ -45,6 +46,7 @@ public class UIManager : MonoBehaviour
         }
         
         selectedCharacter = character;
+        cardHandManager.SetSelectedCharacter(character);
         
         if (selectedCharacter != null)
         {
@@ -134,6 +136,7 @@ public class UIManager : MonoBehaviour
         if (attackButton != null)
         {
             var buttonText = attackButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            cardHandManager.DrawThreeCards();
             if (buttonText != null)
             {
                 buttonText.text = attackMode ? "Cancel Attack" : "Attack Mode";

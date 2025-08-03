@@ -92,6 +92,7 @@ namespace Ilumisoft.HealthSystem
             }
 
             float previousHealth = CurrentHealth;
+            Debug.Log("previousHealth: " + previousHealth);
 
             CurrentHealth = Mathf.Clamp(CurrentHealth - damage, 0, MaxHealth);
 
