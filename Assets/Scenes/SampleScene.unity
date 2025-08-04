@@ -347,6 +347,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4080537214611734125, guid: a8ed546051f43534aa44a0a24a1b7386, type: 3}
+      propertyPath: hitEffectPrefab
+      value: 
+      objectReference: {fileID: 3432958286849152088, guid: 87ee7299dd44ed747af24dbb91bcd33b, type: 3}
+    - target: {fileID: 4080537214611734125, guid: a8ed546051f43534aa44a0a24a1b7386, type: 3}
       propertyPath: isPlayerControlled
       value: 1
       objectReference: {fileID: 0}
@@ -413,6 +417,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7283394435289157035, guid: 6e7898a96ac87a240ad8bd1f24be4375, type: 3}
+      propertyPath: hitEffectPrefab
+      value: 
+      objectReference: {fileID: 3432958286849152088, guid: 87ee7299dd44ed747af24dbb91bcd33b, type: 3}
     - target: {fileID: 7283394435289157035, guid: 6e7898a96ac87a240ad8bd1f24be4375, type: 3}
       propertyPath: isPlayerControlled
       value: 1
@@ -2276,6 +2284,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 1579914518851703040, guid: bf885cb3a2019f54280acdb1a4cc7c50, type: 3}
+      propertyPath: hitEffectPrefab
+      value: 
+      objectReference: {fileID: 3432958286849152088, guid: 87ee7299dd44ed747af24dbb91bcd33b, type: 3}
+    - target: {fileID: 1579914518851703040, guid: bf885cb3a2019f54280acdb1a4cc7c50, type: 3}
       propertyPath: isPlayerControlled
       value: 0
       objectReference: {fileID: 0}
@@ -2712,6 +2724,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3577614856792329232, guid: 908df56d964e19247b5d516d45f78296, type: 3}
+      propertyPath: hitEffectPrefab
+      value: 
+      objectReference: {fileID: 3432958286849152088, guid: 87ee7299dd44ed747af24dbb91bcd33b, type: 3}
     - target: {fileID: 3577614856792329232, guid: 908df56d964e19247b5d516d45f78296, type: 3}
       propertyPath: isPlayerControlled
       value: 0

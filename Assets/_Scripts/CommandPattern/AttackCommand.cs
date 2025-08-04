@@ -40,12 +40,13 @@ public class AttackCommand : ICommand
         Debug.Log($"[AttackCommand] {Character.name} attacks {target.name} for {damage} damage.");
         target.TakeDamage(damage);
 
-        // Spawn particle
-        if (hitEffectPrefab != null)
+        if (Character.hitEffectPrefab != null)
         {
-            GameObject effect = Object.Instantiate(hitEffectPrefab, target.transform.position, Quaternion.identity);
+            Debug.Log("[AttackCommand] Spawning hit effect.");
+            GameObject effect = Object.Instantiate(Character.hitEffectPrefab, target.transform.position, Quaternion.identity);
             Object.Destroy(effect, 2f);
-        }
+        }else
+            Debug.LogWarning("[AttackCommand] No hit effect prefab set.");
 
         return true;
     }

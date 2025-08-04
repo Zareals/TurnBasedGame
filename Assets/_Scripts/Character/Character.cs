@@ -6,6 +6,7 @@ using UnityEngine;
 public class Character : MonoBehaviour
 {
     [SerializeField] private int maxActionPoints = 3;
+    [SerializeField] public GameObject hitEffectPrefab;
     public bool isPlayerControlled = true;
 
     public int GridX { get; private set; }
