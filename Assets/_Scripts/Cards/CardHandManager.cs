@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using Unity.VisualScripting;
 
 public class CardHandManager : MonoBehaviour
 {
@@ -13,21 +14,22 @@ public class CardHandManager : MonoBehaviour
     public float animationDuration = 0.3f;
 
     [Header("References")]
-    public Transform deckPosition;           // Position from which cards appear
-    public RectTransform handArea;           // UI container for hand cards
-    public RectTransform commandQueueArea;   // UI container for queued cards
-    public GameObject cardPrefab;             // Card prefab with Image/Button
-    public TurnManager turnManager;           // Reference to TurnManager
+    public Transform deckPosition;
+    public RectTransform handArea;
+    public GameObject cardPrefab;
+    public TurnManager turnManager;
+
+    [Header("Card Library")]
+    [SerializeField] private List<CardData> availableCards;
 
     private List<RectTransform> handCards = new List<RectTransform>();
     private List<RectTransform> queuedCards = new List<RectTransform>();
-    private List<AttackCommand> queuedCommands = new List<AttackCommand>();
-    [SerializeField] private GameObject hitEffectPrefab;
+    private List<ICommand> queuedCommands = new List<ICommand>();
 
     private Character selectedCharacter;
 
     /// <summary>
-    /// Assigns the currently selected character who will queue commands.
+    /// Assign the selected character to this hand.
     /// </summary>
     public void SetSelectedCharacter(Character character)
     {
@@ -35,7 +37,7 @@ public class CardHandManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Draws 3 cards at once.
+    /// Draw multiple cards (default: 3).
     /// </summary>
     [ContextMenu("Draw 3 Cards")]
     public void DrawThreeCards()
@@ -45,7 +47,7 @@ public class CardHandManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Draws a single card into the hand.
+    /// Draw a single card from available cards.
     /// </summary>
     public void DrawCard()
     {
@@ -55,9 +57,18 @@ public class CardHandManager : MonoBehaviour
             return;
         }
 
+        // Pick a random card (or weighted logic later)
+        CardData cardData = availableCards[Random.Range(0, availableCards.Count)];
+
+        // Create UI card
         GameObject newCard = Instantiate(cardPrefab, handArea);
         RectTransform cardRect = newCard.GetComponent<RectTransform>();
 
+        // Set card visuals
+        CardUI cardUI = newCard.GetComponent<CardUI>();
+        cardUI.Setup(cardData);
+
+        // Animate card from deck
         cardRect.position = deckPosition.position;
         cardRect.localScale = Vector3.zero;
 
@@ -70,87 +81,109 @@ public class CardHandManager : MonoBehaviour
 
             Button btn = newCard.GetComponent<Button>();
             if (btn == null) btn = newCard.AddComponent<Button>();
-            btn.onClick.AddListener(() => OnCardClicked(cardRect));
+            btn.onClick.AddListener(() => OnCardClicked(cardRect, cardData));
         });
 
         ArrangeCards();
     }
 
-    private void ArrangeCards()
+    /// <summary>
+    /// When card is clicked, queue corresponding command.
+    /// </summary>
+    private void OnCardClicked(RectTransform card, CardData cardData)
+{
+    if (selectedCharacter == null)
     {
-        int count = handCards.Count;
-        float midIndex = (count - 1) / 2f;
-
-        for (int i = 0; i < count; i++)
-        {
-            RectTransform card = handCards[i];
-            float xPos = (i - midIndex) * spacing;
-            float yPos = -Mathf.Pow(i - midIndex, 2) * curveStrength;
-
-            card.DOLocalMove(new Vector3(xPos, yPos, 0f), animationDuration).SetEase(Ease.OutQuad);
-            float angle = (i - midIndex) * -5f;
-            card.DORotate(new Vector3(0f, 0f, angle), animationDuration).SetEase(Ease.OutQuad);
-        }
+        Debug.LogWarning("No selected character assigned!");
+        return;
     }
 
-    private void ArrangeQueuedCards()
+    if (selectedCharacter.GetRemainingActionPoints() < cardData.actionPointCost)
     {
-        int count = queuedCards.Count;
-        float midIndex = (count - 1) / 2f;
-
-        for (int i = 0; i < count; i++)
-        {
-            RectTransform card = queuedCards[i];
-            float xPos = (i - midIndex) * spacing * 0.6f; // tighter spacing for queue
-            float yPos = 0;
-
-            card.DOLocalMove(new Vector3(xPos, yPos, 0f), animationDuration).SetEase(Ease.OutQuad);
-            card.DORotate(Vector3.zero, animationDuration).SetEase(Ease.OutQuad);
-        }
+        Debug.Log("Not enough action points to queue this card.");
+        return;
     }
 
-    private void OnCardClicked(RectTransform card)
+    handCards.Remove(card);
+
+    Destroy(card.gameObject);
+
+    ArrangeCards();
+
+    ICommand command = null;
+    switch (cardData.type)
     {
-        int cardCost = 2; // Match with AttackCommand cost
+        case CardType.Attack:
+            Character enemy = FindNearestEnemy();
+            if (enemy != null)
+                command = new AttackCommand(selectedCharacter, enemy, cardData.value, cardData.cardSprite, cardData.effectPrefab);
+            break;
 
-        if (selectedCharacter == null)
-        {
-            Debug.LogWarning("No selected character assigned!");
-            return;
-        }
+        case CardType.Heal:
+            command = new HealCommand(selectedCharacter, cardData.value, cardData.effectPrefab);
+            break;
 
-        if (selectedCharacter.GetRemainingActionPoints() < cardCost)
-        {
-            Debug.Log("Not enough action points to queue this attack.");
-            return;
-        }
+        case CardType.Move:
+            Vector2Int pos = new Vector2Int(selectedCharacter.GridX + 1, selectedCharacter.GridZ);
+            command = new MoveCommand(selectedCharacter, pos.x, pos.y, FindObjectOfType<GridManager>());
+            break;
+    }
 
-        // Move card UI to queue area
-        handCards.Remove(card);
-        queuedCards.Add(card);
-
-        card.SetParent(commandQueueArea);
-        card.localScale = Vector3.one;
-
-        ArrangeCards();
-        ArrangeQueuedCards();
-
-        // Create and add AttackCommand to the character’s queue
-        Character nearestEnemy = FindNearestEnemy();
-        if (nearestEnemy == null)
-        {
-            Debug.LogWarning("No enemy found to target!");
-            return;
-        }
-
-        AttackCommand command = new AttackCommand(selectedCharacter, nearestEnemy, 10);
-
-        // Add command to character queue
+    // Queue the command
+    if (command != null)
+    {
         selectedCharacter.AddCommand(command);
-        Debug.Log($"Queued AttackCommand for {selectedCharacter.name} targeting {nearestEnemy.name}");
+        queuedCommands.Add(command);
+        Debug.Log($"Queued {cardData.type} card: {cardData.cardName}");
+    }
+}
+
+
+    /// <summary>
+    /// Execute queued commands sequentially.
+    /// </summary>
+    public IEnumerator ExecuteQueuedCommands()
+    {
+        foreach (var command in queuedCommands)
+        {
+            yield return selectedCharacter.StartCoroutine(selectedCharacter.ExecuteCommandCoroutine(command));
+
+            // If command has visual effect, spawn here
+            if (command is AttackCommand attackCmd)
+            {
+                if (attackCmd.Character != null)
+                {
+                    var data = GetCardData(CardType.Attack);
+                    if (data != null && data.effectPrefab != null)
+                    {
+                        Instantiate(data.effectPrefab,
+                                    attackCmd.Character.transform.position + Vector3.up * 1f,
+                                    Quaternion.identity);
+                    }
+                }
+            }
+            else if (command is HealCommand healCmd)
+            {
+                var data = GetCardData(CardType.Heal);
+                if (data != null && data.effectPrefab != null)
+                {
+                    Instantiate(data.effectPrefab,
+                                healCmd.Character.transform.position + Vector3.up * 1f,
+                                Quaternion.identity);
+                }
+            }
+        }
+
+        queuedCommands.Clear();
+
+        foreach (var card in queuedCards)
+            Destroy(card.gameObject);
+        queuedCards.Clear();
     }
 
-
+    /// <summary>
+    /// Find nearest enemy for targeting.
+    /// </summary>
     private Character FindNearestEnemy()
     {
         List<Character> enemies = turnManager.GetEnemyTeam();
@@ -169,29 +202,59 @@ public class CardHandManager : MonoBehaviour
                 nearest = enemy;
             }
         }
-        Debug.Log("Nearest enemy: " + nearest.name);
+
         return nearest;
     }
 
     /// <summary>
-    /// Execute all queued attack commands sequentially.
+    /// Helper: Get card data by type.
     /// </summary>
-    public IEnumerator ExecuteQueuedCommands()
+    private CardData GetCardData(CardType type)
     {
-        foreach (var command in queuedCommands)
-        {
-            yield return selectedCharacter.StartCoroutine(selectedCharacter.ExecuteCommandCoroutine(command));
-        }
-        queuedCommands.Clear();
-
-        // Clean up queued cards UI
-        foreach (var card in queuedCards)
-            Destroy(card.gameObject);
-        queuedCards.Clear();
+        return availableCards.Find(c => c.type == type);
     }
 
     /// <summary>
-    /// Clear all cards from hand and queue.
+    /// Arrange cards visually in hand.
+    /// </summary>
+    private void ArrangeCards()
+    {
+        int count = handCards.Count;
+        float midIndex = (count - 1) / 2f;
+
+        for (int i = 0; i < count; i++)
+        {
+            RectTransform card = handCards[i];
+            float xPos = (i - midIndex) * spacing;
+            float yPos = -Mathf.Pow(i - midIndex, 2) * curveStrength;
+
+            card.DOLocalMove(new Vector3(xPos, yPos, 0f), animationDuration).SetEase(Ease.OutQuad);
+            float angle = (i - midIndex) * -5f;
+            card.DORotate(new Vector3(0f, 0f, angle), animationDuration).SetEase(Ease.OutQuad);
+        }
+    }
+
+    /// <summary>
+    /// Arrange queued cards visually in queue.
+    /// </summary>
+    private void ArrangeQueuedCards()
+    {
+        int count = queuedCards.Count;
+        float midIndex = (count - 1) / 2f;
+
+        for (int i = 0; i < count; i++)
+        {
+            RectTransform card = queuedCards[i];
+            float xPos = (i - midIndex) * spacing * 0.6f;
+            float yPos = 0;
+
+            card.DOLocalMove(new Vector3(xPos, yPos, 0f), animationDuration).SetEase(Ease.OutQuad);
+            card.DORotate(Vector3.zero, animationDuration).SetEase(Ease.OutQuad);
+        }
+    }
+
+    /// <summary>
+    /// Clear all cards (hand + queue).
     /// </summary>
     public void ClearAllCards()
     {

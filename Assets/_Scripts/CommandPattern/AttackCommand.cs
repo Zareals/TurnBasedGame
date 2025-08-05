@@ -3,51 +3,42 @@ using UnityEngine;
 
 public class AttackCommand : ICommand
 {
-    public int ActionPointCost => 2;
+    public int ActionPointCost => 1;
     public Character Character { get; private set; }
+    public Sprite CardSprite { get; private set; }
+    public GameObject EffectPrefab { get; private set; }
 
     private Character target;
     private int damage;
-    private static GameObject hitEffectPrefab;
 
-    public AttackCommand(Character attacker, Character target, int damage = 10)
+    public AttackCommand(Character attacker, Character target, int damage = 10, Sprite cardSprite = null, GameObject effectPrefab = null)
     {
         Character = attacker;
         this.target = target;
         this.damage = damage;
-    }
-
-    public static void SetHitEffect(GameObject prefab)
-    {
-        hitEffectPrefab = prefab;
+        CardSprite = cardSprite;
+        EffectPrefab = effectPrefab;
     }
 
     public bool Execute()
     {
         if (target == null || target.IsDead())
-        {
-            Debug.LogWarning("[AttackCommand] Target is null or dead.");
             return false;
-        }
 
         int distance = Mathf.Abs(Character.GridX - target.GridX) + Mathf.Abs(Character.GridZ - target.GridZ);
         if (distance > 1)
-        {
-            Debug.LogWarning("[AttackCommand] Target out of range.");
             return false;
-        }
 
-        Debug.Log($"[AttackCommand] {Character.name} attacks {target.name} for {damage} damage.");
         target.TakeDamage(damage);
 
-        if (Character.hitEffectPrefab != null)
+        // Spawn effect on target
+        if (EffectPrefab != null)
         {
-            Debug.Log("[AttackCommand] Spawning hit effect.");
-            GameObject effect = Object.Instantiate(Character.hitEffectPrefab, target.transform.position, Quaternion.identity);
+            GameObject effect = Object.Instantiate(EffectPrefab, target.transform.position + Vector3.up * 1f, Quaternion.identity);
             Object.Destroy(effect, 2f);
-        }else
-            Debug.LogWarning("[AttackCommand] No hit effect prefab set.");
+        }
 
+        Debug.Log($"{Character.name} attacks {target.name} for {damage} damage!");
         return true;
     }
 

@@ -10,33 +10,42 @@ public class UIManager : MonoBehaviour
     [SerializeField] private UnityEngine.UI.Button endTurnButton;
     [SerializeField] private Transform commandQueueParent;
     [SerializeField] private CardHandManager cardHandManager;
-    
+
     [Header("Command Prefabs")]
     [SerializeField] private GameObject moveCommandPrefab;
     [SerializeField] private GameObject attackCommandPrefab;
-    
+
     [Header("References")]
     [SerializeField] private TurnManager turnManager;
-    
+
     private Character selectedCharacter;
     private List<GameObject> commandUIElements = new List<GameObject>();
-    
+
     void Start()
     {
         if (turnManager != null)
         {
             turnManager.OnTurnChanged += UpdateTurnDisplay;
         }
-        
+
         if (attackButton != null)
             attackButton.onClick.AddListener(ToggleAttackMode);
-        
+
         if (endTurnButton != null)
-            endTurnButton.onClick.AddListener(() => turnManager.EndTurn());
-        
+            endTurnButton.onClick.AddListener(EndTurnRest);
+
         UpdateTurnDisplay(true);
     }
-    
+
+    void EndTurnRest()
+    {
+        if (attackMode == true)
+        {
+            SetAttackMode(false);
+        }
+        turnManager.EndTurn();
+    }
+
     public void SetSelectedCharacter(Character character)
     {
         if (selectedCharacter != null)
@@ -44,20 +53,20 @@ public class UIManager : MonoBehaviour
             selectedCharacter.OnCommandAdded -= UpdateCommandQueue;
             selectedCharacter.OnCommandRemoved -= UpdateCommandQueue;
         }
-        
+
         selectedCharacter = character;
         cardHandManager.SetSelectedCharacter(character);
-        
+
         if (selectedCharacter != null)
         {
             selectedCharacter.OnCommandAdded += UpdateCommandQueue;
             selectedCharacter.OnCommandRemoved += UpdateCommandQueue;
         }
-        
+
         UpdateActionPointsDisplay();
         UpdateCommandQueue(selectedCharacter);
     }
-    
+
     private void UpdateTurnDisplay(bool isPlayerTurn)
     {
         if (turnText != null)
@@ -65,15 +74,15 @@ public class UIManager : MonoBehaviour
             turnText.text = isPlayerTurn ? "Player Turn" : "Enemy Turn";
             turnText.color = isPlayerTurn ? Color.blue : Color.red;
         }
-        
+
         bool showUI = isPlayerTurn && !turnManager.IsExecutingTurn();
-        
+
         if (attackButton != null)
             attackButton.gameObject.SetActive(showUI);
         if (endTurnButton != null)
             endTurnButton.gameObject.SetActive(showUI);
     }
-    
+
     private void UpdateActionPointsDisplay()
     {
         if (actionPointsText != null && selectedCharacter != null)
@@ -85,7 +94,7 @@ public class UIManager : MonoBehaviour
             actionPointsText.text = "No Character Selected";
         }
     }
-    
+
     private void UpdateCommandQueue(Character character)
     {
         // Clear existing UI elements
@@ -95,41 +104,60 @@ public class UIManager : MonoBehaviour
                 Destroy(element);
         }
         commandUIElements.Clear();
-        
+
         if (character == null || commandQueueParent == null) return;
-        
+
         var commands = character.GetCommands();
         for (int i = 0; i < commands.Count; i++)
         {
             var command = commands[i];
             GameObject prefab = command.GetCommandName() == "Move" ? moveCommandPrefab : attackCommandPrefab;
-            
+
             if (prefab != null)
             {
                 GameObject commandUI = Instantiate(prefab, commandQueueParent);
                 commandUIElements.Add(commandUI);
-                
-                // Set up click to remove command
+
+                var img = commandUI.GetComponent<UnityEngine.UI.Image>();
+                if (img != null)
+                {
+                    if (command is AttackCommand attackCommand)
+                    {
+                        img.sprite = attackCommand.CardSprite;
+                    }
+                    else
+                    {
+                        img.sprite = moveCommandPrefab.GetComponent<UnityEngine.UI.Image>().sprite;
+                    }
+                }
+
                 int commandIndex = i;
                 var button = commandUI.GetComponent<UnityEngine.UI.Button>();
                 if (button != null)
                     button.onClick.AddListener(() => RemoveCommand(commandIndex));
             }
+
         }
-        
+
         UpdateActionPointsDisplay();
     }
-    
+
     private void RemoveCommand(int index)
     {
         if (selectedCharacter != null)
         {
+            var commands = selectedCharacter.GetCommands();
+            if (index >= 0 && index < commands.Count)
+            {
+                commands[index].Undo();
+            }
             selectedCharacter.RemoveCommand(index);
         }
     }
-    
+
+
     private bool attackMode = false;
-    
+
     private void ToggleAttackMode()
     {
         attackMode = !attackMode;
@@ -144,9 +172,9 @@ public class UIManager : MonoBehaviour
             }
         }
     }
-    
+
     public bool IsAttackMode() => attackMode;
-    
+
     public void SetAttackMode(bool mode)
     {
         attackMode = mode;

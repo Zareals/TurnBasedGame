@@ -15,7 +15,6 @@ public class Character : MonoBehaviour
     private int currentActionPoints;
     private List<ICommand> commandQueue = new List<ICommand>();
 
-    // Reference to Ilumisoft Health component
     private Health healthComponent;
 
     public System.Action<Character> OnCommandAdded;
@@ -98,12 +97,19 @@ public class Character : MonoBehaviour
 
     public void RemoveCommand(int index)
     {
-        if (index >= 0 && index < commandQueue.Count)
-        {
-            commandQueue.RemoveAt(index);
-            OnCommandRemoved?.Invoke(this);
-        }
+        if (index < 0 || index >= commandQueue.Count) return;
+        var cmd = commandQueue[index];
+
+        // Refund AP
+        currentActionPoints += cmd.ActionPointCost;
+        if (currentActionPoints > maxActionPoints)
+            currentActionPoints = maxActionPoints;
+
+        commandQueue.RemoveAt(index);
+
+        OnCommandRemoved?.Invoke(this);
     }
+
 
     public void ClearCommands()
     {
